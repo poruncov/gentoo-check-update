@@ -170,7 +170,6 @@ check() {
         
         separator
         header "${CLOCK} ОЦЕНКА ВРЕМЕНИ ОБНОВЛЕНИЯ"
-        #separator
         
         local TOTAL_SECONDS=0
         local FOUND_COUNT=0
@@ -224,19 +223,19 @@ check() {
             local AVG_TIME=$((TOTAL_SECONDS / FOUND_COUNT))
             local ESTIMATED_TOTAL=$((AVG_TIME * COUNT))
             
-            echo -e "  ${WHITE}На основе данных ${GREEN}${FOUND_COUNT}${WHITE} из ${GREEN}${COUNT}${WHITE} пакетов${RESET}"
+            echo -e "  ${WHITE}На основе данных ${GREEN}${FOUND_COUNT}${WHITE} из ${GREEN}${COUNT}${WHITE}пакетов${RESET}"
             echo
             
-            if [ $ESTIMATED_TOTAL -lt 300 ]; then
+            if [ $ESTIMATED_TOTAL -lt 301 ]; then
                 success "Обновление займет менее 5 минут ${ROCKET}"
                 echo -e "  ${GREEN}Можно обновлять сразу${RESET}"
-            elif [ $ESTIMATED_TOTAL -lt 900 ]; then
+            elif [ $ESTIMATED_TOTAL -lt 901 ]; then
                 info "Обновление займет примерно 5-15 минут"
                 echo -e "  ${CYAN}Подождите завершения процесса${RESET}"
-            elif [ $ESTIMATED_TOTAL -lt 1800 ]; then
+            elif [ $ESTIMATED_TOTAL -lt 1802 ]; then
                 warning "Обновление займет примерно 15-30 минут"
                 echo -e "  ${YELLOW}Займитесь другими делами${RESET}"
-            elif [ $ESTIMATED_TOTAL -lt 3600 ]; then
+            elif [ $ESTIMATED_TOTAL -lt 3604 ]; then
                 warning "Обновление займет примерно 30-60 минут"
                 echo -e "  ${YELLOW}Рекомендуется дождаться завершения${RESET}"
             else
