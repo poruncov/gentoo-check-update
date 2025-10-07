@@ -71,3 +71,8 @@ rm -Rf /tmp/gentoo-check-update/
 ✅ Интеграция с ZSH для удобного использования
 
 ✅ Быстрая проверка обновлений пакетов
+---
+Скриншоты
+
+<img width="502" height="437" alt="image" src="https://github.com/user-attachments/assets/f0d436cf-67e6-4b5d-beba-9892ae88a9a6" />
+
