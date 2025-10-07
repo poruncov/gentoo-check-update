@@ -125,9 +125,7 @@ check() {
     
     if [ $COUNT -gt 0 ]; then
         separator
-    #    header "${PACKAGE} ДОСТУПНЫЕ ОБНОВЛЕНИЯ"
-#        separator
-        
+
         echo -e "${YELLOW}${BOLD}Найдено пакетов для обновления: ${COUNT}${RESET}"
         echo
         
@@ -135,9 +133,6 @@ check() {
         local PACKAGE_LIST=""
         local counter=1
         
- #       # Отладочная информация
- #       echo -e "${CYAN}[Отладка] Сырой вывод emerge (первые 10 строк):${RESET}" >&2
- #       echo "$FULL_OUTPUT" | head -10 >&2
         
         # Обрабатываем вывод emerge построчно
         while IFS= read -r line; do
@@ -160,7 +155,6 @@ check() {
         
         # Если список пустой, покажем альтернативный способ
         if [ -z "$(echo -e "$PACKAGE_LIST" | tr -d '\n')" ]; then
-  #         echo -e "${YELLOW}  [Альтернативный метод]${RESET}"
             # Альтернативный метод извлечения пакетов
            echo "$FULL_OUTPUT" | grep -E '^\[.*\]' | grep -v -E '^\[(blocks|update)' | \
           while IFS= read -r line; do
@@ -181,8 +175,6 @@ check() {
         local TOTAL_SECONDS=0
         local FOUND_COUNT=0
         
-    #    echo -e "${CYAN}Анализ времени сборки пакетов...${RESET}"
-    #    echo
         
         # Используем сохраненный список пакетов для анализа
         if [ -n "$PACKAGE_LIST" ]; then
@@ -227,8 +219,6 @@ check() {
         fi
         
         separator
-    #    header "💡 РЕКОМЕНДАЦИЯ"
-     #   separator
         
         if [ $FOUND_COUNT -gt 0 ]; then
             local AVG_TIME=$((TOTAL_SECONDS / FOUND_COUNT))
@@ -275,8 +265,6 @@ check() {
             fi
         fi
         
-     #  echo
-     #   info "Для установки обновлений выполните: ${WHITE}sudo emerge -u @world${RESET}"
         
         # Логируем пакеты
         echo "[$DATE] Пакеты для обновления:" | tee -a "$LOG_FILE" >/dev/null 2>&1
