@@ -12,7 +12,7 @@
 ---
 Для установки qlop выполните
 ```
-emerge --ask app-portage/portage-utils
+emerge --ask app-portage/portage-utils app-portage/eix
 ```
 ---
 
