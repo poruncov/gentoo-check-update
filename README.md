@@ -10,7 +10,7 @@
 - **Git** (рекомендуется) - для быстрой синхронизации дерева Portage
 - **Qlop** является частью пакета app-portage/portage-utils (набор полезных утилит для работы с Portage).
 ---
-Для установки qlop выполните
+Для установки qlop и eix выполните
 ```
 emerge --ask app-portage/portage-utils app-portage/eix
 ```
