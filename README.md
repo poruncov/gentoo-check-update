@@ -76,3 +76,4 @@ rm -Rf /tmp/gentoo-check-update/
 
 <img width="502" height="437" alt="image" src="https://github.com/user-attachments/assets/f0d436cf-67e6-4b5d-beba-9892ae88a9a6" />
 
+<img width="515" height="298" alt="image" src="https://github.com/user-attachments/assets/4ea548c7-a23b-44cb-bdcc-ed78d6261509" />
