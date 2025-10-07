@@ -91,9 +91,9 @@ check() {
     separator
     
     if command -v sudo >/dev/null 2>&1 && [ "$EUID" -ne 0 ]; then
-        OUTPUT=$(sudo emerge -pu --deep --changed-use @world 2>/dev/null)
+        OUTPUT=$(sudo emerge -pu --deep --newuse @world 2>/dev/null)
     else
-        OUTPUT=$(emerge -pu --deep --changed-use @world 2>/dev/null)
+        OUTPUT=$(emerge -pu --deep --newuse @world 2>/dev/null)
     fi
     
     COUNT=$(echo "$OUTPUT" | grep -c '^\[.*\] .*-.*\[')
