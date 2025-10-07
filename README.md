@@ -33,7 +33,7 @@ priority = 50
 ```
 sudo ls -lha /var/db/repos/gentoo
 ```
-### Для удаления содержимого выполните
+### Для очистки каталога выполните
 ```
 rm -Rf /var/db/repos/gentoo/*
 ```
