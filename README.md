@@ -77,9 +77,6 @@ rm -Rf /tmp/gentoo-check-update/
 
 ✅ Быстрая проверка обновлений пакетов
 ---
-Скриншоты
-есть пакеты для обновления либо их необходимо пересобрать т.к. изменились USE-флаги.
-<img width="519" height="466" alt="image" src="https://github.com/user-attachments/assets/00fcca43-920b-4f68-a610-829a568ca7f8" />
-обновлений/изменений нет
-<img width="520" height="351" alt="image" src="https://github.com/user-attachments/assets/ac40e8b3-c994-4132-b87a-088d8934671c" />
+Скриншот
+<img width="500" height="594" alt="image" src="https://github.com/user-attachments/assets/813b0b6a-602e-47d5-8f44-f5e154a5e572" />
 
