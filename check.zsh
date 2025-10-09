@@ -52,22 +52,6 @@ check() {
         echo -e "${CYAN}${INFO} $1${RESET}"
     }
     
-    # Функция для извлечения имени пакета из строки emerge
-    extract_package_name() {
-        local line="$1"
-        # Обрабатываем разные форматы:
-        # [ebuild N    ] net-fs/libnfs-5.0.3 USE-"-examples -static-libs -utils™
-        # [ebuild R J media-video/vlc-3.@.21_p20250217-r3_USE="nfs*"
-        # [ebuild     U] app-admin/eselect-1.4.25 [1.4.24]
-        echo "$line" | sed -E 's/^\[[^]]+\]\s+//' | sed -E 's/\s+USE=.*$//' | sed -E 's/\s+\[.*\]$//' | awk '{print $1}'
-    }
-    
-    # Функция для извлечения базового имени пакета (без версии)
-    extract_package_base() {
-        local pkg_full="$1"
-        echo "$pkg_full" | sed -E 's/-[0-9][0-9a-zA-Z._@-]*([-+][0-9a-zA-Z._]+)*$//'
-    }
-    
     # Создаем лог-файл если не существует
     if [ ! -f "$LOG_FILE" ]; then
         touch "$LOG_FILE" 2>/dev/null || sudo touch "$LOG_FILE" 2>/dev/null
@@ -84,6 +68,8 @@ check() {
     local TEMP_LOG=$(mktemp)
     
     echo -e "${CYAN}Синхронизация репозиториев...${RESET}"
+    
+    # Запускаем eix-sync и подавляем вывод времени выполнения
     if command -v sudo >/dev/null 2>&1 && [ "$EUID" -ne 0 ]; then
         sudo eix-sync > "$TEMP_LOG" 2>&1
     else
@@ -125,7 +111,8 @@ check() {
     
     if [ $COUNT -gt 0 ]; then
         separator
-
+        header "${PACKAGE} ДОСТУПНЫЕ ОБНОВЛЕНИЯ"
+        
         echo -e "${YELLOW}${BOLD}Найдено пакетов для обновления: ${COUNT}${RESET}"
         echo
         
@@ -133,54 +120,42 @@ check() {
         local PACKAGE_LIST=""
         local counter=1
         
+        # Упрощенный метод извлечения пакетов
+        PACKAGE_LIST=$(echo "$FULL_OUTPUT" | grep -E '^\[.*\]' | grep -v -E '^\[(blocks|update)' | \
+            sed -E 's/^\[[^]]+\]\s+//' | awk '{print $1}' | sed 's/USE=.*//')
         
-        # Обрабатываем вывод emerge построчно
-        while IFS= read -r line; do
-            if [[ "$line" =~ ^\[.*\] ]]; then
-                # Пропускаем служебные строки
-                if [[ "$line" =~ ^\[(blocks|update) ]]; then
-                    continue
-                fi
-                
-                pkg_name=$(extract_package_name "$line")
-                if [ -n "$pkg_name" ]; then
-                    echo -e "  ${WHITE}${counter}. ${pkg_name}${RESET}"
-                    PACKAGE_LIST="${PACKAGE_LIST}${pkg_name}\n"
-                    counter=$((counter + 1))
-                else
-                    echo -e "  ${YELLOW}[Ошибка парсинга] ${line}${RESET}" >&2
-                fi
-            fi
-        done <<< "$FULL_OUTPUT"
-        
-        # Если список пустой, покажем альтернативный способ
-        if [ -z "$(echo -e "$PACKAGE_LIST" | tr -d '\n')" ]; then
-            # Альтернативный метод извлечения пакетов
-           echo "$FULL_OUTPUT" | grep -E '^\[.*\]' | grep -v -E '^\[(blocks|update)' | \
-          while IFS= read -r line; do
-                # Простой метод - берем все после ] до первого пробела или USE=
-                simple_pkg=$(echo "$line" | sed -E 's/^\[[^]]+\]\s+//' | awk '{print $1}' | sed 's/USE=.*//')
-                if [ -n "$simple_pkg" ]; then
-                    echo -e "  ${WHITE}${counter}. ${simple_pkg}${RESET}"
-                    PACKAGE_LIST="${PACKAGE_LIST}${simple_pkg}\n"
-                    counter=$((counter + 1))
-              fi
+        # Выводим список пакетов
+        if [ -n "$PACKAGE_LIST" ]; then
+            while IFS= read -r pkg_name; do
+                [ -z "$pkg_name" ] && continue
+                echo -e "  ${WHITE}${counter}. ${pkg_name}${RESET}"
+                counter=$((counter + 1))
+            done <<< "$PACKAGE_LIST"
+        else
+            echo -e "  ${YELLOW}Не удалось извлечь список пакетов${RESET}"
+            # Альтернативный метод - покажем сырой вывод
+            echo "$FULL_OUTPUT" | grep -E '^\[.*\]' | head -5 | while read -r line; do
+                echo -e "  ${YELLOW}${line}${RESET}"
             done
         fi
         
         separator
         header "${CLOCK} ОЦЕНКА ВРЕМЕНИ ОБНОВЛЕНИЯ"
+      #  separator
         
         local TOTAL_SECONDS=0
         local FOUND_COUNT=0
         
+        echo -e "${CYAN}Анализ времени сборки пакетов...${RESET}"
+        echo
         
         # Используем сохраненный список пакетов для анализа
         if [ -n "$PACKAGE_LIST" ]; then
             while IFS= read -r pkg_full; do
                 [ -z "$pkg_full" ] && continue
                 
-                pkg_base=$(extract_package_base "$pkg_full")
+                # Извлекаем базовое имя пакета (без версии)
+                pkg_base=$(echo "$pkg_full" | sed -E 's/-[0-9][0-9a-zA-Z._@-]*([-+][0-9a-zA-Z._]+)*$//')
                 
                 # Получаем время сборки из qlop
                 pkg_info=$(qlop "$pkg_base" 2>/dev/null | grep ">>> $pkg_base:" | tail -1)
@@ -189,12 +164,15 @@ check() {
                     pkg_time=$(echo "$pkg_info" | sed -E 's/.*>>> [^:]+: //')
                     echo -e "  ${CYAN}${pkg_base}:${RESET} ${GREEN}${pkg_time}${RESET}"
                     
-                    # Конвертируем время в секунды
-                    if [[ "$pkg_time" =~ ([0-9]+)\'([0-9]+)\" ]]; then
+                    # Конвертируем время в секунды с улучшенным парсингом
+                    local time_seconds=0
+                    if [[ "$pkg_time" =~ ([0-9]+)[\'′]?([0-9]+)[\"]? ]]; then
+                        # Формат 1'22" или 1′22″
                         minutes=${match[1]}
                         seconds=${match[2]}
                         time_seconds=$((minutes * 60 + seconds))
                     elif [[ "$pkg_time" =~ ([0-9]+)s ]]; then
+                        # Формат 34s
                         time_seconds=${match[1]}
                     elif [[ "$pkg_time" =~ ([0-9]+):([0-9]+) ]]; then
                         # Формат MM:SS
@@ -212,37 +190,40 @@ check() {
                 else
                     echo -e "  ${CYAN}${pkg_base}:${RESET} ${YELLOW}нет данных${RESET}"
                 fi
-            done <<< "$(echo -e "$PACKAGE_LIST")"
+            done <<< "$PACKAGE_LIST"
         else
             echo -e "  ${YELLOW}Не удалось получить список пакетов для анализа времени${RESET}"
         fi
         
         separator
-        
+
         if [ $FOUND_COUNT -gt 0 ]; then
-            local AVG_TIME=$((TOTAL_SECONDS / FOUND_COUNT))
+            local AVG_TIME=0
+            if [ $FOUND_COUNT -gt 0 ]; then
+                AVG_TIME=$((TOTAL_SECONDS / FOUND_COUNT))
+            fi
             local ESTIMATED_TOTAL=$((AVG_TIME * COUNT))
             
-            echo -e "  ${WHITE}На основе данных ${GREEN}${FOUND_COUNT}${WHITE} из ${GREEN}${COUNT}${WHITE}пакетов${RESET}"
+            echo -e "  ${WHITE}На основе данных ${GREEN}${FOUND_COUNT}${WHITE} из ${GREEN}${COUNT}${WHITE} пакетов${RESET}"
             echo
             
-            if [ $ESTIMATED_TOTAL -lt 301 ]; then
+            if [ $ESTIMATED_TOTAL -lt 300 ]; then
                 success "Обновление займет менее 5 минут ${ROCKET}"
-                echo -e "  ${GREEN}Можно обновлять сразу${RESET}"
-            elif [ $ESTIMATED_TOTAL -lt 901 ]; then
+                echo -e "  ${GREEN}   Можно обновлять сразу${RESET}"
+            elif [ $ESTIMATED_TOTAL -lt 900 ]; then
                 info "Обновление займет примерно 5-15 минут"
-                echo -e "  ${CYAN}Подождите завершения процесса${RESET}"
-            elif [ $ESTIMATED_TOTAL -lt 1802 ]; then
+                echo -e "  ${CYAN}   Займитесь другими делами${RESET}"
+            elif [ $ESTIMATED_TOTAL -lt 1800 ]; then
                 warning "Обновление займет примерно 15-30 минут"
-                echo -e "  ${YELLOW}Займитесь другими делами${RESET}"
-            elif [ $ESTIMATED_TOTAL -lt 3604 ]; then
+                echo -e "  ${YELLOW}   Займитесь другими делами${RESET}"
+            elif [ $ESTIMATED_TOTAL -lt 3600 ]; then
                 warning "Обновление займет примерно 30-60 минут"
-                echo -e "  ${YELLOW}Рекомендуется дождаться завершения${RESET}"
+                echo -e "  ${YELLOW}   Займитесь другими делами${RESET}"
             else
                 local hours=$((ESTIMATED_TOTAL / 3600))
                 local minutes=$(( (ESTIMATED_TOTAL % 3600) / 60 ))
                 warning "Обновление займет примерно ${hours}ч ${minutes}м"
-                echo -e "  ${YELLOW}Лучше запланировать на удобное время${RESET}"
+                echo -e "  ${YELLOW}   Лучше запланировать на удобное время${RESET}"
             fi
         else
             # Резервная оценка по количеству пакетов
@@ -251,19 +232,18 @@ check() {
             
             if [ $COUNT -le 3 ]; then
                 success "Обновление займет примерно 5-15 минут ${ROCKET}"
-                echo -e "  ${GREEN}Можно обновлять сразу${RESET}"
+                echo -e "  ${GREEN}   Можно обновлять сразу${RESET}"
             elif [ $COUNT -le 8 ]; then
                 info "Обновление займет примерно 15-30 минут"
-                echo -e "  ${CYAN}Подождите завершения процесса${RESET}"
+                echo -e "  ${CYAN}   Займитесь другими делами${RESET}"
             elif [ $COUNT -le 15 ]; then
                 warning "Обновление займет примерно 30-60 минут"
-                echo -e "  ${YELLOW}Рекомендуется дождаться завершения${RESET}"
+                echo -e "  ${YELLOW}   Займитесь другими делами${RESET}"
             else
                 warning "Обновление займет более 1 часа"
-                echo -e "  ${YELLOW}Лучше запланировать на удобное время${RESET}"
+                echo -e "  ${YELLOW}   Лучше запланировать на удобное время${RESET}"
             fi
         fi
-        
         
         # Логируем пакеты
         echo "[$DATE] Пакеты для обновления:" | tee -a "$LOG_FILE" >/dev/null 2>&1
@@ -271,7 +251,7 @@ check() {
             while IFS= read -r pkg; do
                 [ -z "$pkg" ] && continue
                 echo "  - $pkg" | tee -a "$LOG_FILE" >/dev/null 2>&1
-            done <<< "$(echo -e "$PACKAGE_LIST")"
+            done <<< "$PACKAGE_LIST"
         else
             echo "  - не удалось извлечь список пакетов" | tee -a "$LOG_FILE" >/dev/null 2>&1
         fi
