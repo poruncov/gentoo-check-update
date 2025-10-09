@@ -45,7 +45,7 @@ check() {
     # Обновление базы пакетов (без вывода)
     local TEMP_LOG=$(mktemp)
     if command -v sudo >/dev/null 2>&1 && [ "$EUID" -ne 0 ]; then
-        sudo eix-sync > "$TEMP_LOG" 2>&1
+    { time (sudo eix-sync -q > "$TEMP_LOG" 2>&1); } 2>/dev/null      
     else
         eix-sync > "$TEMP_LOG" 2>&1
     fi
