@@ -47,7 +47,7 @@ check() {
     if command -v sudo >/dev/null 2>&1 && [ "$EUID" -ne 0 ]; then
     { time (sudo eix-sync -q > "$TEMP_LOG" 2>&1); } 2>/dev/null      
     else
-        eix-sync > "$TEMP_LOG" 2>&1
+        { time (sudo eix-sync -q > "$TEMP_LOG" 2>&1); } 2>/dev/null
     fi
     rm -f "$TEMP_LOG"
     
